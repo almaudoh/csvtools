@@ -1,8 +1,8 @@
 <?php
 
-namespace CsvTools\Tests;
+namespace Alma\CsvTools\Tests;
 
-use CsvTools\CsvListParser;
+use Alma\CsvTools\CsvListParser;
 
 /**
  * Tests the CsvListParser.

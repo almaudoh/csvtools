@@ -1,6 +1,6 @@
 <?php
 
-namespace CsvTools;
+namespace Alma\CsvTools;
 
 class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
 
@@ -188,7 +188,7 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
       list($this->header, $this->csvData) = $this->csvParser->parseCsvString($this->csvText);
     }
     elseif (isset($this->csvFilename)) {
-      list($this->header, $this->csvData) = $this->csvParser->readCsvAsArray($this->csvFilename);
+      list($this->header, $this->csvData) = $this->csvParser->parseCsvFile($this->csvFilename);
     }
   }
 

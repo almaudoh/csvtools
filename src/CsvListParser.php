@@ -1,6 +1,6 @@
 <?php
 
-namespace CsvTools;
+namespace Alma\CsvTools;
 
 /**
  * Provides utility functions for parsing CSV lists.

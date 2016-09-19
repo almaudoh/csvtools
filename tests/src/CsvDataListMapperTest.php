@@ -1,11 +1,15 @@
 <?php
 
-namespace CsvTools\Tests;
+namespace Alma\CsvTools\Tests;
 
-use CsvTools\CsvDataListMapper;
+use Alma\CsvTools\CsvDataListMapper;
 
+/**
+ * Tests the CsvDataListMapper.
+ *
+ * @group CsvTools
+ */
 class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
-
   /**
    * Tests the setSourceText() method, optimization and return value.
    */
