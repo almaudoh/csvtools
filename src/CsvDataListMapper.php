@@ -165,6 +165,9 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
    * @return array
    */
   public function getHeader() {
+    if (!isset($this->csvData)) {
+      $this->parseCsvData();
+    }
     return $this->header;
   }
 

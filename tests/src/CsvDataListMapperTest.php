@@ -123,6 +123,7 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
     $mapper->setSourceFile(__DIR__ . '/../files/large_file.csv');
 
     $mapper->setHasHeader(FALSE);
+    $this->assertEquals(11, count($mapper->getHeader()));
     $this->assertEquals(4, count($mapper));
     $this->assertEquals('Polly', $mapper[3][0]);
 
@@ -133,6 +134,7 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
       'phone_number' => 'MOBILE',
     ]);
 
+    $this->assertEquals(3, count($mapper->getHeader()));
     $this->assertEquals(3, count($mapper));
     $this->assertEquals('Polly', $mapper[2]['contact_name']);
     $this->assertEquals('noreply@example.com', $mapper[2]['email_address']);
