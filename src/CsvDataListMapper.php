@@ -2,7 +2,7 @@
 
 namespace CsvTools;
 
-class CsvDataListMapper implements \Iterator {
+class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
 
   /**
    * The header of the parsed CSV file
@@ -24,7 +24,7 @@ class CsvDataListMapper implements \Iterator {
    *
    * @var array
    */
-  protected $headerMap;
+  protected $dataMap;
 
   /**
    * The source CSV text to be parsed.
@@ -54,6 +54,20 @@ class CsvDataListMapper implements \Iterator {
    */
   protected $rowIndex;
 
+  /**
+   * The number of records to be read from the CSV file.
+   *
+   * @var int
+   */
+  protected $maxRecords;
+
+  /**
+   * The CSV parser.
+   *
+   * @var \CsvTools\CsvListParser
+   */
+  protected $csvParser;
+
   public function __construct() {
     $this->csvParser = new CsvListParser();
   }
@@ -63,11 +77,16 @@ class CsvDataListMapper implements \Iterator {
    *
    * If both source text and file are set, the source CSV text takes precedence.
    *
+   * @param string $csv_text
+   *   The CSV text to be parsed.
+   *
    * @return $this
    */
   public function setSourceText($csv_text) {
-    $this->csvText = $csv_text;
-    $this->csvData = NULL;
+    if ($this->csvText != $csv_text) {
+      $this->csvText = $csv_text;
+      $this->csvData = NULL;
+    }
     return $this;
   }
 
@@ -76,25 +95,32 @@ class CsvDataListMapper implements \Iterator {
    *
    * If both source text and file are set, the CSV text takes precedence.
    *
+   * @param string $filename
+   *   The name of the file containing the CSV text to be parsed.
+   *
    * @return $this
    */
   public function setSourceFile($filename) {
-    $this->csvFilename = $filename;
-    $this->csvData = NULL;
+    if ($this->csvFilename != $filename) {
+      $this->csvFilename = $filename;
+      $this->csvData = NULL;
+    }
     return $this;
   }
 
   /**
    * Sets the mapping of CSV headers to fields in the resulting CSV data list.
    *
-   * @param array $header_mapping
-   *   A mapping of the CSV headers to the various
+   * @param array $mapping
+   *   A mapping of the CSV headers to the data fields for each row.
    *
    * @return $this
    */
-  public function setHeaderMap(array $header_mapping) {
-    $this->headerMap = $header_mapping;
-    $this->csvData = NULL;
+  public function setDataMap(array $mapping) {
+    if (!isset($this->dataMap) || array_diff($this->dataMap, $mapping) != []) {
+      $this->dataMap = $mapping;
+      $this->csvData = NULL;
+    }
     return $this;
   }
 
@@ -107,8 +133,28 @@ class CsvDataListMapper implements \Iterator {
    * @return $this
    */
   public function setHasHeader($has_header = TRUE) {
-    $this->hasHeader = $has_header;
-    $this->csvData = NULL;
+    if ($this->hasHeader != $has_header) {
+      $this->hasHeader = $has_header;
+      $this->csvData = NULL;
+    }
+    return $this;
+  }
+
+  /**
+   * Sets the maximum number of records to be read from the CSV file.
+   *
+   * The actual number of records may be less if the CSV is small.
+   *
+   * @param int $size
+   *   The maximum number of records.
+   *
+   * @return $this
+   */
+  public function setMaxRecords($size = NULL) {
+    if ($this->maxRecords != $size) {
+      $this->recordCount = $size;
+      $this->csvData = NULL;
+    }
     return $this;
   }
 
@@ -134,26 +180,25 @@ class CsvDataListMapper implements \Iterator {
   }
 
   /**
-   * Parses the CSV file or text.
+   * Parses the CSV text or file.
    */
   protected function parseCsvData() {
+    $this->initializeParser();
     if (isset($this->csvText)) {
-      $this->initializeParser();
-      $csv = $this->csvParser->parseCsvString($this->csvText);
-      if ($this->hasHeader) {
-        $this->header = array_shift($csv);
-        $this->csvData = $csv;
-      }
-      else {
-        $this->header = array_keys($csv[0]);
-        $this->csvData = $csv;
-      }
+      list($this->header, $this->csvData) = $this->csvParser->parseCsvString($this->csvText);
     }
     elseif (isset($this->csvFilename)) {
-      list($header, $data) = $this->csvParser->readCsvAsArray($this->csvFilename);
-      $this->header = $header;
-      $this->csvData = $data;
+      list($this->header, $this->csvData) = $this->csvParser->readCsvAsArray($this->csvFilename);
     }
+  }
+
+  /**
+   * Initializes the CSV parser with settings needed to parse the source string.
+   */
+  protected function initializeParser() {
+    $this->csvParser
+      ->setSetting('has_header', $this->hasHeader)
+      ->setSetting('max_records', $this->maxRecords);
   }
 
   /**
@@ -195,12 +240,47 @@ class CsvDataListMapper implements \Iterator {
   }
 
   /**
-   * Initializes the CSV parser with settings needed to parse the source string.
+   * {@inheritdoc}
    */
-  protected function initializeParser() {
-    $this->csvParser
-      ->setSetting('has_header', $this->hasHeader)
-      ->setSetting('slice', $this->headerMap);
+  public function offsetExists($offset) {
+    if (!isset($this->csvData)) {
+      $this->parseCsvData();
+    }
+    return array_key_exists($offset, $this->csvData);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function offsetGet($offset) {
+    if (!isset($this->csvData)) {
+      $this->parseCsvData();
+    }
+    return array_combine($this->header, $this->csvData[$offset]);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function offsetSet($offset, $value) {
+    throw new \RuntimeException("Data mapper is read-only.");
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function offsetUnset($offset) {
+    throw new \RuntimeException("Data mapper is read-only.");
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function count() {
+    if (!isset($this->csvData)) {
+      $this->parseCsvData();
+    }
+    return count($this->csvData);
   }
 
 }

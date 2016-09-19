@@ -36,11 +36,17 @@ class CsvListParser {
    *     table by, and the function to pre-process those columns with.
    *   - on_collision (integer): A constant that determines what to do when an
    *     index is already in use.
-   *   - slice (integer|array|null): The segment of the csv file to be returned.
-   *     An integer specifies the first n columns to be returned, an array
-   *     specifies which particular columns to be returned, while null (default)
-   *     returns everything.
-   *   - max_length (integer): The maximum number of rows to be returned. Leave
+   *   - has_header: Specifies whether the CSV text has a header or not.
+   *   - header_map: Maps the headers on the CSV text to a predefined set of
+   *     fields. The returned data will have these new headers instead of the
+   *     original headers that came with the CSV. For CSV without headers, the
+   *     original zero-based column indices can be used. This value should be an
+   *     array with the new headers as keys and the original headers or column
+   *     indices as values. E.g.:
+   *     ['name' => 'User name', 'phone' => 'telephone no.', etc.]
+   *     If header_map is specified only those headers in the map and their
+   *     corresponding columns will be returned.
+   *   - max_records (integer): The maximum number of rows to be returned. Leave
    *     null (default) to return everything.
    *   - record_length (integer): The maximum length of a record in the input
    *     file.
@@ -54,10 +60,10 @@ class CsvListParser {
         0 => ''
       ],
       'on_collision' => static::ON_COLLISION_ABORT,
-      'slice' => NULL,
-      'max_length' => NULL,
-      'record_length' => 0,
       'has_header' => TRUE,
+      'header_map' => NULL,
+      'max_records' => NULL,
+      'record_length' => 0,
     ];
   }
 
@@ -71,6 +77,17 @@ class CsvListParser {
    */
   public function __construct(array $settings = []) {
     $this->settings = $settings + $this->defaultSettings();
+  }
+
+  /**
+   * Gets one of the settings for parsing CSV files.
+   *
+   * @param string $name
+   *
+   * @return mixed
+   */
+  public function getSetting($name) {
+    return $this->settings[$name];
   }
 
   /**
@@ -91,21 +108,163 @@ class CsvListParser {
   }
 
   /**
-   * Parse a csv text into array of rows (each row being an array of values).
+   * Unsets a setting to allow the default values to be used.
+   *
+   * @param string $name
+   *   The name of the setting to unset.
+   *
+   * @return $this
+   *
+   * @see ::defaultSettings() for the list of all default values.
+   */
+  public function unsetSetting($name) {
+    $this->settings[$name] = $this->defaultSettings()[$name];
+    return $this;
+  }
+
+  /**
+   * Parses a CSV text into array of rows (each row being an array of values).
    *
    * @param string $text
-   *   A string containing the CSV format to be parsed.
+   *   A string containing the text to be parsed in CSV format.
    *
    * @return array
+   *   A two value array containing the header and the body of the CSV file.
    */
   public function parseCsvString($text) {
+    // Parse the rows in the CSV string.
     $rows = str_getcsv($text, "\n", $this->settings['quote']);
-    foreach ($rows as $key => $row) {
-      $rows[$key] = array_map(function ($value) {
-        return trim($value);
-      }, str_getcsv($row, $this->settings['delimiter']), $this->settings['quote']);
+
+    // Remove the header, use the column indices if no header is specified.
+    if ($this->settings['has_header']) {
+      $header = $this->parseCsvLine(array_shift($rows));
     }
-    return $rows;
+    else {
+      $header = array_keys($this->parseCsvLine($rows[0]));
+    }
+
+    if (is_array($this->settings['header_map'])) {
+      // Select the header fields according to the header map.
+      $new_header = [];
+      foreach ($this->settings['header_map'] as $field => $column) {
+        $new_header[] = $field;
+      }
+
+      // Parse the remaining rows and select only those in the header map.
+      $records_read = 0; $new_rows = [];
+      foreach ($rows as $key => $row) {
+        if (isset($this->settings['max_records']) && $records_read++ >= $this->settings['max_records']) {
+          break;
+        }
+        $parsed_row = array_combine($header, $this->parseCsvLine($row));
+        $new_row = [];
+        foreach ($this->settings['header_map'] as $field => $column) {
+          $new_row[] = $parsed_row[$column];
+        }
+        $new_rows[$key] = $new_row;
+      }
+      return [$new_header, $new_rows];
+    }
+    else {
+      // Parse the remaining rows.
+      $records_read = 0; $new_rows = [];
+      foreach ($rows as $key => $row) {
+        if (isset($this->settings['max_records']) && $records_read++ >= $this->settings['max_records']) {
+          break;
+        }
+        $new_rows[$key] = $this->parseCsvLine($row);
+      }
+      // Return combined array of header and rows.
+      return [$header, $new_rows];
+    }
+  }
+
+  /**
+   * Helper function to parses a single line of CSV using the current settings.
+   *
+   * @param string $line
+   *   A single line in a CSV string.
+   *
+   * @return array
+   *   The parsed CSV line.
+   */
+  protected function parseCsvLine($line) {
+    return str_getcsv($line, $this->settings['delimiter'], $this->settings['quote']);
+  }
+
+  /**
+   * Parses a CSV file into array of rows (each row being an array of values).
+   *
+   * The two-dimensional array corresponds to the rows and columns of the CSV
+   * file.
+   *
+   * @param  string $csv_file
+   *   The name of the CSV file to read.
+   *
+   * @return array
+   *   A two value array containing the header and the body of the CSV file.
+   *
+   * @throws \InvalidArgumentException
+   *   If the file supplied is not in the valid CSV format.
+   */
+  public function parseCsvFile($csv_file) {
+    $file = new \SplFileObject($csv_file);
+    $file->setFlags(\SplFileObject::READ_CSV);
+    $file->setCsvControl($this->settings['delimiter'], $this->settings['quote']);
+
+    if (!$this->isValidCsvFile($file)) {
+      throw new \InvalidArgumentException(sprintf('Invalid CSV file provided: "%s"', $csv_file));
+    }
+
+    // If the CSV is specified as having a header, then assume the first line
+    // contains the header.
+    if ($this->settings['has_header']) {
+      $header = $file->current();
+      $file->next();
+    }
+    else {
+      $header = array_keys($file->current());
+    }
+
+    $rows = [];
+    if (is_array($this->settings['header_map'])) {
+      // Select the header fields according to the header map.
+      $new_header = [];
+      foreach ($this->settings['header_map'] as $field => $column) {
+        $new_header[] = $field;
+      }
+
+      // Process the body of the CSV file.
+      // Parse the remaining rows and select only those in the header map.
+      $records_read = 0; $new_rows = [];
+      while (!$file->eof()) {
+        if (isset($this->settings['max_records']) && $records_read++ >= $this->settings['max_records']) {
+          break;
+        }
+        $parsed_row = array_combine($header, $file->current());
+        $new_row = [];
+        foreach ($this->settings['header_map'] as $field => $column) {
+          $new_row[] = $parsed_row[$column];
+        }
+        $rows[] = $new_row;
+        $file->next();
+      }
+      $file = NULL;
+      return [$new_header, $rows];
+    }
+    else {
+      $records_read = 0;
+      while (!$file->eof()) {
+        if (isset($this->settings['max_records']) && $records_read++ >= $this->settings['max_records']) {
+          break;
+        }
+        $rows[] = $file->current();
+        $file->next();
+      }
+      $file = NULL;
+      return [$header, $rows];
+    }
+
   }
 
   /**
@@ -174,12 +333,12 @@ class CsvListParser {
 
       if (isset($rows[$index_by])) {
         switch ($this->settings['on_collision']) {
-          case ON_COLLISION_OVERWRITE:
+          case CsvListParser::ON_COLLISION_OVERWRITE:
             $rows[$index_by] = array_combine($header, $data);
             break;
-          case ON_COLLISION_SKIP:
+          case CsvListParser::ON_COLLISION_SKIP:
             break;
-          case ON_COLLISION_ABORT:
+          case CsvListParser::ON_COLLISION_ABORT:
             return -5;
         }
       }
@@ -193,93 +352,6 @@ class CsvListParser {
   }
 
   /**
-   * Reads a CSV file and stores it as a two-dimensional array.
-   *
-   * The two-dimensional array corresponds to the rows and columns of the csv
-   * file.
-   *
-   * @param  string $csv_file
-   *   The CSV file to read.
-   *
-   * @return array
-   *   A two value array with containing the header and the body of the CSV file.
-   *
-   * @throws \InvalidArgumentException
-   *   If the file supplied is not in the valid CSV format.
-   */
-  public function readCsvAsArray($csv_file) {
-
-//    $handle = fopen($csv_file, 'r');
-//    if ($handle === NULL || ($data = fgetcsv($handle, $this->settings['record_length'], $this->settings['delimiter'], $this->settings['quotes'])) === FALSE) {
-//      // Couldn't open/read from CSV file.
-//      throw new \Exception(sprintf('Failed to read from CSV file "%s"', $csv_file));
-//    }
-
-    $file = new \SplFileObject($csv_file);
-    $file->setFlags(\SplFileObject::READ_CSV);
-    $file->setCsvControl($this->settings['delimiter'], $this->settings['quote']);
-
-    if (!$this->isValidCsv($file)) {
-      throw new \InvalidArgumentException(sprintf('Invalid CSV file provided: "%s"', $csv_file));
-    }
-
-    $header = array(); $indexes = array();
-    $slice = $this->settings['slice'];
-
-    // If the CSV is specified as having a header, then assume the first line
-    // contains the header.
-    if ($this->settings['has_header']) {
-      foreach ($file->current() as $index => $field) {
-        if (is_numeric($slice)) {
-          if ($index < $slice) {
-            $header[] = trim($field);
-          }
-        }
-        elseif (is_array($slice)) {
-          if (in_array($index, $slice) || in_array($field, $slice)) {
-            $header[$index] = trim($field);
-            $indexes[] = $index;
-          }
-        }
-        else {
-          $header[] = trim($field);
-        }
-      }
-      $file->next();
-    }
-
-    // Process the body of the CSV file.
-    $rows = array();
-    $ct = 0;
-    while (!$file->eof()) {
-      if (!is_null($this->settings['max_length']) && ++$ct > $this->settings['max_length']) {
-        break;
-      }
-
-      $data = $file->current();
-      if (is_integer($slice)) {
-        $rows[] = array_slice($data, 0, $slice);
-      }
-      elseif (is_array($slice)) {
-        $arr = array();
-        foreach ($data as $k => $v) {
-          if (in_array($k, $indexes)) {
-            $arr[$k] = $v;
-          }
-        }
-        $rows[] = $arr;
-      }
-      else {
-        $rows[] = $data;
-      }
-      $file->next();
-    }
-    $file = NULL;
-
-    return array($header, $rows);
-  }
-
-  /**
    * @param \SplFileObject|string $file
    *   The file to check if it's valid CSV.
    *
@@ -289,7 +361,7 @@ class CsvListParser {
    * @throws \InvalidArgumentException
    *   If an invalid $file object is given
    */
-  public function isValidCsv($file) {
+  public function isValidCsvFile($file) {
     if (is_string($file)) {
       $file = new \SplFileObject($file);
       $file->setFlags(\SplFileObject::READ_CSV);
