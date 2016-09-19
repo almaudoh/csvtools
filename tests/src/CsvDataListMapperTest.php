@@ -122,9 +122,21 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
     $mapper = new TestCsvDataListMapper();
     $mapper->setSourceFile(__DIR__ . '/../files/large_file.csv');
 
-    // todo: Test setHasHeader, setDataMap, etc.
-    $this->assertEquals(5, count($mapper));
-    $this->assertEquals('Polly', $mapper[3]['NAME']);
+    $mapper->setHasHeader(FALSE);
+    $this->assertEquals(4, count($mapper));
+    $this->assertEquals('Polly', $mapper[3][0]);
+
+    $mapper->setHasHeader(TRUE);
+    $mapper->setDataMap([
+      'contact_name' => 'NAME',
+      'email_address' => 'EMAIL',
+      'phone_number' => 'MOBILE',
+    ]);
+
+    $this->assertEquals(3, count($mapper));
+    $this->assertEquals('Polly', $mapper[2]['contact_name']);
+    $this->assertEquals('noreply@example.com', $mapper[2]['email_address']);
+    $this->assertEquals('2348030783839', $mapper[2]['phone_number']);
   }
   
   public function testArrayIterator() {

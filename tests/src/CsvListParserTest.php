@@ -46,7 +46,7 @@ class CsvListParserTest extends \PHPUnit_Framework_TestCase {
   /**
    * Tests the two parsing methods for strings and for files.
    *
-   * @param \CsvTools\CsvListParser $parser
+   * @param \Alma\CsvTools\CsvListParser $parser
    * @param $method
    * @param $argument
    *

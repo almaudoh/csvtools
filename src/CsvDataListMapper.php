@@ -13,9 +13,10 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
 
   /**
    * TRUE if the CSV is specified as having headers, FALSE otherwise.
+   *
    * @var bool
    */
-  protected $hasHeader;
+  protected $hasHeader = TRUE;
 
   /**
    * Pre-configured mapping of CSV headers to data list fields.
@@ -64,7 +65,7 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
   /**
    * The CSV parser.
    *
-   * @var \CsvTools\CsvListParser
+   * @var \Alma\CsvTools\CsvListParser
    */
   protected $csvParser;
 
@@ -198,7 +199,8 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
   protected function initializeParser() {
     $this->csvParser
       ->setSetting('has_header', $this->hasHeader)
-      ->setSetting('max_records', $this->maxRecords);
+      ->setSetting('max_records', $this->maxRecords)
+      ->setSetting('header_map', $this->dataMap);
   }
 
   /**
