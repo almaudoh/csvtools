@@ -8,6 +8,7 @@ use Alma\CsvTools\CsvDataListMapper;
  * Tests the CsvDataListMapper.
  *
  * @group CsvTools
+ * @coversDefaultClass \Alma\CsvTools\CsvDataListMapper
  */
 class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
   /**
@@ -128,16 +129,18 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
       'field_0' => 0,
       'field_1' => 0,
     ];
-    $mapper = new CsvDataListMapper();
-    $mapper
+    $mapper = (new CsvDataListMapper())
       ->setSourceText($csv)
       ->setHasHeader(FALSE)
       ->setDataMap($mapping);
 
     // Test iterator.
+    $count = 0;
     foreach ($mapper as $key => $value) {
       $this->assertEquals(['field_0' => $numbers[$key], 'field_1' => $numbers[$key]], $mapper[$key]);
+      $count++;
     }
+    $this->assertEquals(5, $count);
 
     // Test array access.
     $this->assertEquals(['field_0' => $numbers[0], 'field_1' => $numbers[0]], $mapper[0]);
@@ -178,9 +181,17 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
       ->setHasHeader();
 
     // Test the iterator functionality.
-    foreach ($mapper as $row) {
+    $emails = [
+      'noreply@example.com',
+      'noreply@example.com',
+      'noreply@example.com',
+      '3reply@example.com',
+      'noreply@example.com',
+      '1reply@example.com'
+    ];
+    foreach ($mapper as $key => $row) {
       $this->assertEquals(count($row), 11);
-      $this->assertEquals($row['EMAIL'], 'noreply@example.com');
+      $this->assertEquals($row['EMAIL'], $emails[$key]);
     }
   }
 
@@ -204,6 +215,29 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
       'ACTIVE_ROLES' => '',
       'WANTED_ROLES' => ''
     ], $mapper[4]);
+  }
+
+  /**
+   * Explicit tests for \Iterator methods.
+   *
+   * @covers ::current()
+   * @covers ::key()
+   * @covers ::next()
+   * @covers ::valid()
+   * @covers ::rewind()
+   */
+  public function testIsValid() {
+    $csv_array = ['header', '52726300', '70004519', '65385161', '87881954', '21465208'];
+    $mapper = (new TestCsvDataListMapper())
+      ->setSourceText(implode("\n", $csv_array));
+    for ($i = 1; $i < 6; $i++) {
+      $this->assertEquals(['header' => $csv_array[$i]], $mapper->current());
+      $this->assertEquals($i - 1, $mapper->key());
+      $this->assertTrue($mapper->valid());
+      $mapper->next();
+    }
+    $mapper->rewind();
+    $this->assertEquals(0, $mapper->key());
   }
 
   /**

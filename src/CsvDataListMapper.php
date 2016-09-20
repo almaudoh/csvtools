@@ -53,14 +53,14 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
    *
    * @var int
    */
-  protected $rowIndex;
+  protected $rowIndex = 0;
 
   /**
    * The number of records to be read from the CSV file.
    *
    * @var int
    */
-  protected $maxRecords;
+  protected $maxRecords = NULL;
 
   /**
    * The CSV parser.
@@ -234,7 +234,10 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
    * {@inheritdoc}
    */
   public function valid() {
-    return $this->rowIndex >= 0 && $this->rowIndex < count($this->csvText);
+    if (!isset($this->csvData)) {
+      $this->parseCsvData();
+    }
+    return $this->rowIndex >= 0 && $this->rowIndex < count($this->csvData);
   }
 
   /**
