@@ -11,7 +11,7 @@ before_script:
   - composer self-update
   - composer install --prefer-source --no-interaction --dev
 
-script: phpunit --bootstrap phpunit.bootstrap.php ./
+script: ./vendor/phpunit/phpunit/phpunit --bootstrap phpunit.bootstrap.php ./tests
 
 matrix:
   allow_failures:
