@@ -11,9 +11,10 @@ before_script:
   - composer self-update
   - composer install --prefer-source --no-interaction --dev
 
-script: phpunit
+script: phpunit --bootstrap phpunit.bootstrap.php ./
 
 matrix:
   allow_failures:
+    - php: 5.5
     - php: hhvm
   fast_finish: true
