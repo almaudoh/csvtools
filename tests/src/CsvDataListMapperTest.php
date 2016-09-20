@@ -118,6 +118,36 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
     $this->assertNull($mapper->peekCsvData());
   }
 
+  public function testParseSingleColumnString() {
+    $numbers = [];
+    for ($i = 0; $i < 5; $i++) {
+      $numbers[] = rand(10000000, 99999999);
+    }
+    $csv = implode("\n", $numbers);
+    $mapping = [
+      'field_0' => 0,
+      'field_1' => 0,
+    ];
+    $mapper = new CsvDataListMapper();
+    $mapper
+      ->setSourceText($csv)
+      ->setHasHeader(FALSE)
+      ->setDataMap($mapping);
+
+    // Test iterator.
+    foreach ($mapper as $key => $value) {
+      $this->assertEquals(['field_0' => $numbers[$key], 'field_1' => $numbers[$key]], $mapper[$key]);
+    }
+
+    // Test array access.
+    $this->assertEquals(['field_0' => $numbers[0], 'field_1' => $numbers[0]], $mapper[0]);
+    $this->assertEquals(['field_0' => $numbers[1], 'field_1' => $numbers[1]], $mapper[1]);
+    $this->assertEquals(['field_0' => $numbers[2], 'field_1' => $numbers[2]], $mapper[2]);
+    $this->assertEquals(['field_0' => $numbers[3], 'field_1' => $numbers[3]], $mapper[3]);
+    $this->assertEquals(['field_0' => $numbers[4], 'field_1' => $numbers[4]], $mapper[4]);
+
+  }
+
   public function testParseCsvFile() {
     $mapper = new TestCsvDataListMapper();
     $mapper->setSourceFile(__DIR__ . '/../files/large_file.csv');
