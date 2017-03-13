@@ -63,6 +63,13 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
   protected $maxRecords = NULL;
 
   /**
+   * Whether to skip empty parsed CSV rows or not.
+   *
+   * @var bool
+   */
+  protected $skipEmptyRows = TRUE;
+
+  /**
    * The CSV parser.
    *
    * @var \Alma\CsvTools\CsvListParser
@@ -153,7 +160,15 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
    */
   public function setMaxRecords($size = NULL) {
     if ($this->maxRecords != $size) {
-      $this->recordCount = $size;
+      $this->maxRecords = $size;
+      $this->csvData = NULL;
+    }
+    return $this;
+  }
+
+  public function setSkipEmptyRows($skip = TRUE) {
+    if ($this->skipEmptyRows != $skip) {
+      $this->skipEmptyRows = $skip;
       $this->csvData = NULL;
     }
     return $this;
@@ -203,7 +218,8 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
     $this->csvParser
       ->setSetting('has_header', $this->hasHeader)
       ->setSetting('max_records', $this->maxRecords)
-      ->setSetting('header_map', $this->dataMap);
+      ->setSetting('header_map', $this->dataMap)
+      ->setSetting('skip_empty', $this->skipEmptyRows);
   }
 
   /**

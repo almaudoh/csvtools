@@ -50,6 +50,7 @@ class CsvListParser {
    *     null (default) to return everything.
    *   - record_length (integer): The maximum length of a record in the input
    *     file.
+   *   - skip_empty (boolean): Whether to skip parsed empty records or not.
    */
   protected function defaultSettings() {
     return [
@@ -64,6 +65,7 @@ class CsvListParser {
       'header_map' => NULL,
       'max_records' => NULL,
       'record_length' => 0,
+      'skip_empty' => FALSE,
     ];
   }
 
@@ -156,12 +158,15 @@ class CsvListParser {
         if (isset($this->settings['max_records']) && $records_read++ >= $this->settings['max_records']) {
           break;
         }
-        $parsed_row = array_combine($header, $this->parseCsvLine($row));
-        $new_row = [];
-        foreach ($this->settings['header_map'] as $field => $column) {
-          $new_row[] = $parsed_row[$column];
+        $parsed_row = $this->parseCsvLine($row);
+        if ($parsed_row) {
+          $parsed_row = array_combine($header, $parsed_row);
+          $new_row = [];
+          foreach ($this->settings['header_map'] as $field => $column) {
+            $new_row[] = $parsed_row[$column];
+          }
+          $new_rows[$key] = $new_row;
         }
-        $new_rows[$key] = $new_row;
       }
       return [$new_header, $new_rows];
     }
@@ -172,7 +177,9 @@ class CsvListParser {
         if (isset($this->settings['max_records']) && $records_read++ >= $this->settings['max_records']) {
           break;
         }
-        $new_rows[$key] = $this->parseCsvLine($row);
+        if ($parsed_row = $this->parseCsvLine($row)) {
+          $new_rows[$key] = $parsed_row;
+        }
       }
       // Return combined array of header and rows.
       return [$header, $new_rows];
@@ -189,7 +196,10 @@ class CsvListParser {
    *   The parsed CSV line.
    */
   protected function parseCsvLine($line) {
-    return str_getcsv($line, $this->settings['delimiter'], $this->settings['quote']);
+    if (trim($line, $this->settings['delimiter']) || $this->settings['skip_empty'] == FALSE) {
+      return str_getcsv($line, $this->settings['delimiter'], $this->settings['quote']);
+    }
+    return [];
   }
 
   /**
@@ -242,11 +252,13 @@ class CsvListParser {
           break;
         }
         $parsed_row = array_combine($header, $file->current());
-        $new_row = [];
-        foreach ($this->settings['header_map'] as $field => $column) {
-          $new_row[] = $parsed_row[$column];
+        if (implode('', $parsed_row) || $this->settings['skip_empty'] == FALSE) {
+          $new_row = [];
+          foreach ($this->settings['header_map'] as $field => $column) {
+            $new_row[] = $parsed_row[$column];
+          }
+          $rows[] = $new_row;
         }
-        $rows[] = $new_row;
         $file->next();
       }
       $file = NULL;
@@ -258,7 +270,10 @@ class CsvListParser {
         if (isset($this->settings['max_records']) && $records_read++ >= $this->settings['max_records']) {
           break;
         }
-        $rows[] = $file->current();
+        $parsed_row = $file->current();
+        if (implode('', $parsed_row) || $this->settings['skip_empty'] == FALSE) {
+          $rows[] = $parsed_row;
+        }
         $file->next();
       }
       $file = NULL;
