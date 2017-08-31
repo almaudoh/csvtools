@@ -160,7 +160,7 @@ class CsvListParser {
         }
         $parsed_row = $this->parseCsvLine($row);
         if ($parsed_row) {
-          $parsed_row = array_combine($header, $parsed_row);
+          $parsed_row = array_combine($header, $this->equalizeColumns($parsed_row, $header));
           $new_row = [];
           foreach ($this->settings['header_map'] as $field => $column) {
             $new_row[] = $parsed_row[$column];
@@ -177,7 +177,7 @@ class CsvListParser {
         if (isset($this->settings['max_records']) && $records_read++ >= $this->settings['max_records']) {
           break;
         }
-        if ($parsed_row = $this->parseCsvLine($row)) {
+        if ($parsed_row = $this->equalizeColumns($this->parseCsvLine($row), $header)) {
           $new_rows[$key] = $parsed_row;
         }
       }
@@ -251,7 +251,7 @@ class CsvListParser {
         if (isset($this->settings['max_records']) && $records_read++ >= $this->settings['max_records']) {
           break;
         }
-        $parsed_row = array_combine($header, $file->current());
+        $parsed_row = array_combine($header, $this->equalizeColumns($file->current(), $header));
         if (implode('', $parsed_row) || $this->settings['skip_empty'] == FALSE) {
           $new_row = [];
           foreach ($this->settings['header_map'] as $field => $column) {
@@ -270,7 +270,7 @@ class CsvListParser {
         if (isset($this->settings['max_records']) && $records_read++ >= $this->settings['max_records']) {
           break;
         }
-        $parsed_row = $file->current();
+        $parsed_row = $this->equalizeColumns($file->current(), $header);
         if (implode('', $parsed_row) || $this->settings['skip_empty'] == FALSE) {
           $rows[] = $parsed_row;
         }
@@ -395,6 +395,32 @@ class CsvListParser {
     }
     $file->rewind();
     return count(array_unique($columnCount)) === 1;
+  }
+
+  /**
+   * Makes up the number of columns in a parsed row to match the header.
+   *
+   * @param array $parsed_row
+   *   The already parsed row, which may have more or less elements than header.
+   * @param array $header
+   *   The header.
+   *
+   * @return array
+   *   The made up row.
+   */
+  protected function equalizeColumns(array $parsed_row, array $header) {
+    // Empty row should not be considered as well.
+    $diff = count($header) - count($parsed_row);
+    if (empty($parsed_row) || $diff === 0) {
+      return $parsed_row;
+    }
+    if ($diff > 0) {
+      $parsed_row += array_fill(count($parsed_row), $diff, '');
+    }
+    else if ($diff < 0) {
+      $parsed_row = array_slice($parsed_row, 0, $diff);
+    }
+    return $parsed_row;
   }
 
 }

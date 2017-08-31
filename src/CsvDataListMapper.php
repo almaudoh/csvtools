@@ -2,6 +2,9 @@
 
 namespace Alma\CsvTools;
 
+/**
+ * Allows specific columns in CSV data lists to be mapped into a data structure.
+ */
 class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
 
   /**

@@ -146,10 +146,36 @@ class CsvListParserTest extends \PHPUnit_Framework_TestCase {
 
   public function providerCsvParsingMethod() {
     return [
-      [new CsvListParser(), 'parseCsvString', $this->csvString()],
-      [new CsvListParser(), 'parseCsvFile', __DIR__ . '/../files/filename_a.csv'],
+      'parseCsvString' => [new CsvListParser(), 'parseCsvString', $this->csvString()],
+      'parseCsvFile' => [new CsvListParser(), 'parseCsvFile', __DIR__ . '/../files/filename_a.csv'],
     ];
 
+  }
+
+  /**
+   * Tests that parsing continues even when some rows have incomplete columns.
+   */
+  public function testIncompleteRows() {
+    $test_data = '2347076865757,
+2347023797088,
+2347076865757,
+2347023797088,
+2347076865757,
+2347023797088';
+    $parser = new CsvListParser(['has_header' => FALSE]);
+    $parsedCsv = $parser->parseCsvString($test_data);
+    $this->assertEquals(6, count($parsedCsv[1]));
+    $this->assertEquals(2, count($parsedCsv[1][5]));
+
+    $parser = new CsvListParser(['has_header' => TRUE]);
+    $parsedCsv = $parser->parseCsvString($test_data);
+    $this->assertEquals(5, count($parsedCsv[1]));
+    $this->assertEquals(2, count($parsedCsv[1][4]));
+
+    $parser = new CsvListParser(['has_header' => FALSE, 'header_map' => ['Number' => 0, '' => 1]]);
+    $parsedCsv = $parser->parseCsvString($test_data);
+    $this->assertEquals(6, count($parsedCsv[1]));
+    $this->assertEquals(2, count($parsedCsv[1][5]));
   }
 
   protected function csvString() {
