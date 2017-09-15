@@ -226,6 +226,16 @@ class CsvListParser {
       throw new \InvalidArgumentException(sprintf('Invalid CSV file provided: "%s"', $csv_file));
     }
 
+    // Skip all empty lines at the beginning.
+    if ($this->settings['skip_empty']) {
+      while (implode('', $file->current()) == '') {
+        $file->next();
+        if ($file->eof()) {
+          return [[], []];
+        }
+      }
+    }
+
     // If the CSV is specified as having a header, then assume the first line
     // contains the header.
     if ($this->settings['has_header']) {

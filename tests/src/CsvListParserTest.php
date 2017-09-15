@@ -178,6 +178,24 @@ class CsvListParserTest extends \PHPUnit_Framework_TestCase {
     $this->assertEquals(2, count($parsedCsv[1][5]));
   }
 
+  /**
+   * Tests a file that has some flaws in it.
+   */
+  public function testFlawedFile() {
+    $parser = (new CsvListParser())
+      ->setSetting('has_header', TRUE)
+      ->setSetting('skip_empty', TRUE);
+    $parsedCsv = $parser->parseCsvFile(__DIR__ . '/../files/flawed_file.csv');
+    $this->assertEquals(3, count($parsedCsv[0]));
+    $this->assertEquals(4, count($parsedCsv[1]));
+    $this->assertEquals($parsedCsv[1], [
+      ['kevwe', 'kevwe@example.org', '1234567890'],
+      ['kevwe1', 'kevwe1@example.org', '2345678901'],
+      ['kevwe2', 'kevwe2@example.org', '3456789012'],
+      ['glad', 'glad@example.org', '4567890123'],
+    ]);
+  }
+
   protected function csvString() {
     return <<<CSV
 NAME,MOBILE,MOBILE2,EMAIL,CITY,COUNTRY,BIRTH_DAY,WORK,NOTES,ACTIVE_ROLES,WANTED_ROLES
