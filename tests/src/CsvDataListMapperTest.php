@@ -16,7 +16,7 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
    */
   public function testSetSourceText() {
     $mapper = new TestCsvDataListMapper();
-    
+
     // Set the source text and ensure the value is set. Assert return value also.
     $object = $mapper->setSourceText($this->csvString());
     $this->assertEquals($mapper->getSourceText(), $this->csvString());
@@ -37,7 +37,7 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
    */
   public function testSetSourceFile() {
     $mapper = new TestCsvDataListMapper();
-    
+
     // Set the source text and ensure the value is set. Assert return value also.
     $object = $mapper->setSourceFile(__DIR__ . '/../files/filename_a.csv');
     $this->assertEquals($mapper->getSourceFile(), __DIR__ . '/../files/filename_a.csv');
@@ -173,7 +173,7 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
     $this->assertEquals('noreply@example.com', $mapper[2]['email_address']);
     $this->assertEquals('2348030783839', $mapper[2]['phone_number']);
   }
-  
+
   public function testArrayIterator() {
     $mapper = new TestCsvDataListMapper();
     $mapper
@@ -240,6 +240,30 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
     $this->assertEquals(0, $mapper->key());
   }
 
+  public function testColumnAccess() {
+    $csv_string = $this->csvString();
+    $mapper = (new TestCsvDataListMapper())
+      ->setSourceText($csv_string);
+
+    $this->assertEquals($mapper['MOBILE'], [
+      '2348030783839',
+      '2348038983839',
+      '2348030783839',
+      '2348030783457',
+      '2347090783839',
+      '2347090783234',
+    ]);
+
+    $this->assertEquals($mapper['MOBILE2'], [
+      '',
+      '2348030783839',
+      '2348030783839',
+      '2348030783839',
+      '',
+      '',
+    ]);
+  }
+
   /**
    * @expectedException \RuntimeException
    */
@@ -302,7 +326,7 @@ class TestCsvDataListMapper extends CsvDataListMapper {
   public function getMaxRecords() {
     return $this->maxRecords;
   }
-  
+
   public function peekCsvData() {
     return $this->csvData;
   }

@@ -273,6 +273,10 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
     if (!isset($this->csvData)) {
       $this->parseCsvData();
     }
+    // Return true if column is non-numeric and exists in header.
+    if (!is_numeric($offset)) {
+      return array_search($offset, $this->header) !== false;
+    }
     return array_key_exists($offset, $this->csvData);
   }
 
@@ -282,6 +286,10 @@ class CsvDataListMapper implements \Iterator, \ArrayAccess, \Countable {
   public function offsetGet($offset) {
     if (!isset($this->csvData)) {
       $this->parseCsvData();
+    }
+    // Return a column if offset is non-numeric.
+    if (!is_numeric($offset)) {
+      return array_column($this->csvData, array_search($offset, $this->header));
     }
     return array_combine($this->header, $this->csvData[$offset]);
   }
