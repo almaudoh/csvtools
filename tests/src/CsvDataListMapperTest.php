@@ -243,7 +243,7 @@ class CsvDataListMapperTest extends \PHPUnit_Framework_TestCase {
   public function testColumnAccess() {
     $csv_string = $this->csvString();
     $mapper = (new TestCsvDataListMapper())
-      ->setSourceText(implode("\n", $csv_string));
+      ->setSourceText($csv_string);
 
     $this->assertEquals($mapper['MOBILE'], [
       '2348030783839',
