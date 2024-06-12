@@ -10,13 +10,17 @@
     }
   ],
   "autoload": {
-    "psr-4": { "Alma\\CsvTools\\": "src/" }
+    "psr-4": {
+      "Alma\\CsvTools\\": "src/"
+    }
   },
   "autoload-dev": {
-    "psr-4": { "Alma\\CsvTools\\Tests\\": "tests/src/" }
+    "psr-4": {
+      "Alma\\CsvTools\\Tests\\": "tests/src/"
+    }
   },
   "require": {
-    "php": "^5.5.9 || ^7.0"
+    "php": "^5.5.9 || ^7.0 || ^8.0"
   },
   "require-dev": {
     "phpunit/phpunit": "^4.8"
